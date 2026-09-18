@@ -1,9 +1,8 @@
 import zmq
-from time import sleep
 
 context = zmq.Context()
 sub = context.socket(zmq.SUB)
-sub.setsockopt_string(zmq.SUBSCRIBE, "")
+sub.setsockopt_string(zmq.SUBSCRIBE, "dice")
 sub.connect("tcp://proxy:5556")
 
 while True:
