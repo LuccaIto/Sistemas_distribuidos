@@ -1,0 +1,85 @@
+services:
+  broker:
+    build:
+      context: ./python/cliente
+    command: ["python", "proxy.py"]
+    ports:
+      - "5557:5557"
+      - "5558:5558"
+    restart: unless-stopped
+
+  reference:
+    build:
+      context: ./python/servidor
+    command: ["python", "reference.py"]
+    ports:
+      - "5560:5560"
+    restart: unless-stopped
+
+  server1:
+    build:
+      context: ./python/servidor
+    command: ["python", "servidor.py"]
+    environment:
+      SERVER_NAME: server1
+      CLIENT_PORT: 5555
+      PEER_PORT: 5651
+      REF_HOST: reference
+      PUB_HOST: broker
+    ports:
+      - "5555:5555"
+    volumes:
+      - server1_data:/data
+    depends_on:
+      - broker
+      - reference
+    restart: unless-stopped
+
+  server2:
+    build:
+      context: ./python/servidor
+    command: ["python", "servidor.py"]
+    environment:
+      SERVER_NAME: server2
+      CLIENT_PORT: 5556
+      PEER_PORT: 5652
+      REF_HOST: reference
+      PUB_HOST: broker
+    ports:
+      - "5556:5556"
+    volumes:
+      - server2_data:/data
+    depends_on:
+      - broker
+      - reference
+    restart: unless-stopped
+
+  bot1:
+    build:
+      context: ./python/cliente
+    environment:
+      BOT_NAME: bot1
+      SERVER_HOST: server1
+      SERVER_PORT: 5555
+      SUB_HOST: broker
+    depends_on:
+      - server1
+      - broker
+    restart: unless-stopped
+
+  bot2:
+    build:
+      context: ./python/cliente
+    environment:
+      BOT_NAME: bot2
+      SERVER_HOST: server2
+      SERVER_PORT: 5556
+      SUB_HOST: broker
+    depends_on:
+      - server2
+      - broker
+    restart: unless-stopped
+
+volumes:
+  server1_data:
+  server2_data:
