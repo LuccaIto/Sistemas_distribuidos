@@ -7,98 +7,105 @@
 #include <nlohmann/json.hpp>
 #include "arquivo.cpp"
 
-using json = nlohmann::json;
+using json = nlohmann::json;        // Cria um apelido para a classe json
 
-std::string get_timestamp() {
+
+// Gera um bloco de data e hora atual 
+std::string obterTimesstampAtual(){
     auto agora = std::chrono::system_clock::now();
-    auto t = std::chrono::system_clock::to_time_t(agora);
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(agora.time_since_epoch()) % 1000;
-    std::stringstream ss;
-    ss << std::put_time(std::localtime(&t), "%Y-%m-%dT%H:%M:%S");
-    ss << '.' << std::setfill('0') << std::setw(3) << ms.count();
-    return ss.str();
+    auto tempo = std::chrono::system_clock::to_time_t(agora);
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(agora.time_since_epoch()) % 1000;       //extrai os milissegundos
+    
+    std::stringstream fluxoTexto;
+    fluxoTexto << std::put_time(std::localtime(&tempo), "%Y-%m-%dT%H:%M:%S");       // Formata data e hora no formato padrão ISO
+    fluxoTexto << '.' << std::setfill('0') << std::setw(3) << ms.count();
+    return fluxoTexto.str();
 }
 
-int main() {
-    inicializar();
+int main(){
+    inicializarArmazenamento();
 
-    zmq::context_t context(1);
-    zmq::socket_t socket(context, zmq::socket_type::rep);
-    socket.bind("tcp://*:5555");
+    zmq::context_t contextoZmq(1);
+    zmq::socket_t socketResposta(contextoZmq, zmq::socket_type::rep);
+    socketResposta.bind("tcp://*:5555");
 
-    std::cout << "==================================================\n";
-    std::cout << "SERVIDOR INICIADO\n";
-    std::cout << "Escutando tcp://localhost:5555\n";
-    std::cout << "==================================================\n";
+    std::cout << "\n-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-\n";
+    std::cout << " ______SERVIDOR C++ ATIVO______ \n";
+    std::cout << "\n-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-\n";
 
-    while (true) {
-        zmq::message_t req_msg;
-        socket.recv(req_msg, zmq::recv_flags::none);
+    while(true){
+        zmq::message_t mensagemBin;
+        socketResposta.recv(mensagemBin, zmq::recv_flags::none);
 
-        // Desserializa a mensagem binária do MessagePack
-        json mensagem = json::from_msgpack(
-            static_cast<const uint8_t*>(req_msg.data()), 
-            req_msg.size()
-        );
+        try{
+            const uint8_t* ponteiroBit = static_cast<const uint8_t*>(mensagemBin.data());
+            json requisicaoCliente = json::from_msgpack(ponteiroBit, ponteiroBit + mensagemBin.size());
 
-        std::cout << "\n[RECEBIDO]\n";
-        std::cout << mensagem.dump(4) << std::endl;
+            std::cout << "\n [ SERVIDOR - REQUISICAO RECEBIDA ] \n";
+            std::cout << requisicaoCliente.dump(4) << std::endl;
 
-        json dados = carregar();
+            json dadosArmazenados = carregarDados();
 
-        json resposta = {
-            {"timestamp", get_timestamp()},
-            {"success", false},
-            {"message", "Operação inválida"}
-        };
+            json respostaServidor = {
+                {"timestamp", obterTimesstampAtual()},
+                {"success", false},
+                {"message", "Comando ou operação errada"},
+            };
 
-        std::string tipo = mensagem.value("tipo", "");
+            std:: string tipoOperacao = requisicaoCliente.value("tipo", " ");
 
-        if (tipo == "LOGIN") {
-            std::string usuario = mensagem["usuario"];
-            
-            dados["logins"].push_back({
-                {"usuario", usuario},
-                {"timestamp", mensagem["timestamp"]}
-            });
-            salvar(dados);
+            if(tipoOperacao == "LOGIN"){
+                std::string nomeUsuario = requisicaoCliente["usuario"];
 
-            resposta["success"] = true;
-            resposta["message"] = usuario + " conectado.";
+                dadosArmazenados["logins"].push_back({
+                    {"usuario", nomeUsuario},
+                    {"timestamp", requisicaoCliente["timestamp"]},
+                });
+                salvarDados(dadosArmazenados);
 
-        } else if (tipo == "LIST_CHANNELS") {
-            resposta["success"] = true;
-            resposta["canais"] = dados["canais"];
+                respostaServidor["success"] = true;
+                respostaServidor["message"] = nomeUsuario + " Conectado com sucesso!! ";
+            }
+            else if(tipoOperacao == "LIST_CHANNELS"){
+                respostaServidor["success"] = true;
+                respostaServidor["message"] = " Canais recuperados com sucesso!! ";
+                respostaServidor["canais"] = dadosArmazenados["canais"];
+            }
+            else if(tipoOperacao == "CREATE_CHANNEL"){
+                std::string nomeCanalDesejado = requisicaoCliente["canal"];
 
-        } else if (tipo == "CREATE_CHANNEL") {
-            std::string canal = mensagem["canal"];
-            
-            bool existe = false;
-            for (const auto& c : dados["canais"]) {
-                if (c == canal) {
-                    existe = true;
-                    break;
+                bool canalExistente = false;
+
+                for(const auto & canalAtual : dadosArmazenados["canais"]){
+                    if(canalAtual == nomeCanalDesejado){
+                        canalExistente = true;
+                        break;
+                    }
+                }
+
+                if(canalExistente){
+                    respostaServidor["success"] = false;
+                    respostaServidor["message"] = " Canal já existe.. ";
+                }
+                else{
+                    dadosArmazenados["canais"].push_back(nomeCanalDesejado);
+                    salvarDados(dadosArmazenados);
+
+                    respostaServidor["success"] = true;
+                    respostaServidor["message"] = "Canal " + nomeCanalDesejado + " criado com sucesso!! ";
                 }
             }
 
-            if (existe) {
-                resposta["success"] = false;
-                resposta["message"] = "Canal já existe.";
-            } else {
-                dados["canais"].push_back(canal);
-                salvar(dados);
-                resposta["success"] = true;
-                resposta["message"] = "Canal '" + canal + "' criado.";
-            }
+            std::cout << "[ SERVIDOR - RESPOSTA ENVIADA] \n";
+            std::cout << respostaServidor.dump(4) << std::endl;
+            
+            std::vector<uint8_t> bitResposta = json::to_msgpack(respostaServidor);
+            socketResposta.send(zmq::buffer(bitResposta.data(), bitResposta.size()), zmq::send_flags::none);
+
         }
-
-        std::cout << "[ENVIADO]\n";
-        std::cout << resposta.dump(4) << std::endl;
-
-        // Serializa a resposta para MessagePack e envia de volta
-        std::vector<uint8_t> packed = json::to_msgpack(resposta);
-        socket.send(zmq::buffer(packed.data(), packed.size()), zmq::send_flags::none);
+        catch(const std::exception & erroExecucao){
+            std::cerr << "[ ERRO NO PROCESSAMENTO DO SERVIDOR ]" << erroExecucao.what() << std::endl;
+        }
     }
-
     return 0;
 }
