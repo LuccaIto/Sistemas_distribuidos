@@ -1,0 +1,24 @@
+{
+    "canais": [
+        "geral",
+        "jogos"
+    ],
+    "logins": [
+        {
+            "timestamp": "2026-11-19T01:00:15.844",
+            "usuario": "bot_cpp"
+        },
+        {
+            "timestamp": "2026-11-19T01:14:19.682",
+            "usuario": "bot_cpp"
+        },
+        {
+            "timestamp": "2026-11-19T01:42:34.742",
+            "usuario": "bot_cpp"
+        },
+        {
+            "timestamp": "2026-11-19T01:43:42.003",
+            "usuario": "bot_cpp"
+        }
+    ]
+}
