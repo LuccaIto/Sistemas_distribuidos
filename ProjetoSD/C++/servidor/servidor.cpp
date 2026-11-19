@@ -6,6 +6,8 @@
 #include <zmq.hpp>
 #include <nlohmann/json.hpp>
 #include "arquivo.cpp"
+#include <thread>
+#include <vector>
 
 using json = nlohmann::json;        // Cria um apelido para a classe json
 
@@ -26,8 +28,13 @@ int main(){
     inicializarArmazenamento();
 
     zmq::context_t contextoZmq(1);
+
     zmq::socket_t socketResposta(contextoZmq, zmq::socket_type::rep);
     socketResposta.bind("tcp://*:5555");
+
+    zmq::socket_t socketPublicacao(contextoZmq, zmq::socket_type::pub);
+    socketPublicacao.connect("tcp://localhost:5557");
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     std::cout << "\n-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-\n";
     std::cout << " ______SERVIDOR C++ ATIVO______ \n";
@@ -52,7 +59,7 @@ int main(){
                 {"message", "Comando ou operação errada"},
             };
 
-            std:: string tipoOperacao = requisicaoCliente.value("tipo", " ");
+            std:: string tipoOperacao = requisicaoCliente.value("tipo", "");
 
             if(tipoOperacao == "LOGIN"){
                 std::string nomeUsuario = requisicaoCliente["usuario"];
@@ -95,6 +102,52 @@ int main(){
                     respostaServidor["message"] = "Canal " + nomeCanalDesejado + " criado com sucesso!! ";
                 }
             }
+            else if(tipoOperacao == "PUBLISH"){
+                std::string nomeCanal = requisicaoCliente.value("canal", "");
+                std::string textoMsg = requisicaoCliente.value("mensagem", "");
+                std::string nomeUsuario = requisicaoCliente.value("usuario", "");
+
+                bool canalValido = false;
+                for(const auto & canalAtual : dadosArmazenados["canais"]){
+                    if(canalAtual == nomeCanal){
+                        canalValido = true;
+                        break;
+                    }
+                }
+
+                if(nomeCanal.empty() || textoMsg.empty()){
+                    respostaServidor["success"] = false;
+                    respostaServidor["message"] = " Canal ou mensagem vazios.. ";
+                }
+                else if(!canalValido){
+                    respostaServidor["success"] = false;
+                    respostaServidor["message"] = " Canal não existe.. ";
+                }
+                else{
+                    std::string tsEnvio = obterTimesstampAtual();
+                    json pacotePublicacao = {
+                        {"canal", nomeCanal},
+                        {"mensagem", textoMsg},
+                        {"usuario", nomeUsuario},
+                        {"timestamp", tsEnvio},
+                    };
+                    std::vector<uint8_t> bitPublicacao = json::to_msgpack(pacotePublicacao);
+
+                    auto sendTopico = socketPublicacao.send(zmq::buffer(nomeCanal), zmq::send_flags::sndmore);
+                    auto sendPayload = socketPublicacao.send(zmq::buffer(bitPublicacao.data(), bitPublicacao.size()),
+                                                                zmq::send_flags::none);
+                    
+                    (void)sendTopico;
+                    (void)sendPayload;
+
+                    dadosArmazenados["mensagens"].push_back(pacotePublicacao);
+                    salvarDados(dadosArmazenados);
+
+                    respostaServidor["success"] = true;
+                    respostaServidor["message"] = "Mensagem publicada no canal " + nomeCanal + " com sucesso!! ";
+                }
+            }
+        
 
             std::cout << "[ SERVIDOR - RESPOSTA ENVIADA] \n";
             std::cout << respostaServidor.dump(4) << std::endl;

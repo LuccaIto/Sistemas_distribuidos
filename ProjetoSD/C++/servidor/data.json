@@ -23,6 +23,70 @@
         {
             "timestamp": "2026-11-19T02:04:37.838",
             "usuario": "bot_cpp"
+        },
+        {
+            "timestamp": "2026-11-19T06:33:11.970",
+            "usuario": "bot_cpp"
+        },
+        {
+            "timestamp": "2026-11-19T07:55:45.306",
+            "usuario": "bot_cpp"
+        }
+    ],
+    "mensagens": [
+        {
+            "canal": "jogos",
+            "mensagem": "Teste direto de PUBLISH no servidor!",
+            "timestamp": "2026-11-19T06:57:04.263",
+            "usuario": "bot_cpp"
+        },
+        {
+            "canal": "geral",
+            "mensagem": "Mensagem #1 do bot_cpp",
+            "timestamp": "2026-11-19T07:55:49.390",
+            "usuario": "bot_cpp"
+        },
+        {
+            "canal": "jogos",
+            "mensagem": "Mensagem #2 do bot_cpp",
+            "timestamp": "2026-11-19T07:55:52.446",
+            "usuario": "bot_cpp"
+        },
+        {
+            "canal": "geral",
+            "mensagem": "Mensagem #3 do bot_cpp",
+            "timestamp": "2026-11-19T07:55:55.501",
+            "usuario": "bot_cpp"
+        },
+        {
+            "canal": "jogos",
+            "mensagem": "Mensagem #4 do bot_cpp",
+            "timestamp": "2026-11-19T07:55:58.558",
+            "usuario": "bot_cpp"
+        },
+        {
+            "canal": "geral",
+            "mensagem": "Mensagem #5 do bot_cpp",
+            "timestamp": "2026-11-19T07:56:01.616",
+            "usuario": "bot_cpp"
+        },
+        {
+            "canal": "jogos",
+            "mensagem": "Mensagem #6 do bot_cpp",
+            "timestamp": "2026-11-19T07:56:04.675",
+            "usuario": "bot_cpp"
+        },
+        {
+            "canal": "geral",
+            "mensagem": "Mensagem #7 do bot_cpp",
+            "timestamp": "2026-11-19T07:56:07.731",
+            "usuario": "bot_cpp"
+        },
+        {
+            "canal": "jogos",
+            "mensagem": "Mensagem #8 do bot_cpp",
+            "timestamp": "2026-11-19T07:56:10.793",
+            "usuario": "bot_cpp"
         }
     ]
 }
